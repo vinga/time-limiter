@@ -108,6 +108,11 @@ public class TimeTracker {
         logger.info("Reset all time tracking");
     }
     
+    public void setTotalTime(String processName, long totalTimeSeconds) {
+        totalTime.put(processName, totalTimeSeconds * 1000L); // Convert to milliseconds
+        logger.info("Set total time for {} to {} seconds", processName, totalTimeSeconds);
+    }
+    
     public Map<String, Long> getAllTotalTimes() {
         Map<String, Long> times = new ConcurrentHashMap<>();
         totalTime.forEach((process, timeMs) -> times.put(process, timeMs / 1000L));

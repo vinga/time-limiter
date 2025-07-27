@@ -82,6 +82,34 @@ public class VoiceNotifier {
         });
     }
     
+    public void announceBlockMinutes(String appName, int minutes, String reason) {
+        String message;
+        if (minutes < 60) {
+            message = String.format("%s has been blocked for %d minutes. Reason: %s", 
+                appName, minutes, reason);
+        } else {
+            int hours = minutes / 60;
+            int remainingMinutes = minutes % 60;
+            if (remainingMinutes == 0) {
+                message = String.format("%s has been blocked for %d hours. Reason: %s", 
+                    appName, hours, reason);
+            } else {
+                message = String.format("%s has been blocked for %d hours and %d minutes. Reason: %s", 
+                    appName, hours, remainingMinutes, reason);
+            }
+        }
+        
+        logger.info("Voice notification: {}", message);
+        
+        CompletableFuture.runAsync(() -> {
+            if (isTtsAvailable) {
+                speakText(message);
+            } else {
+                playBlockingBeep();
+            }
+        });
+    }
+    
     public void sayBlockedAttempt(String appName, long remainingMinutes) {
         long hours = remainingMinutes / 60;
         long minutes = remainingMinutes % 60;

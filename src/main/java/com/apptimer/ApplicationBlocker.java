@@ -24,6 +24,24 @@ public class ApplicationBlocker {
     }
     
     /**
+     * Block an application for a specified number of minutes
+     */
+    public void blockApplicationMinutes(String processName, int minutes, String reason) {
+        LocalDateTime blockUntil = LocalDateTime.now().plusMinutes(minutes);
+        blockedUntil.put(processName.toLowerCase(), blockUntil);
+        
+        String appName = getAppDisplayName(processName);
+        logger.info("Application {} blocked until {} - Reason: {}", 
+                   appName, blockUntil.format(DateTimeFormatter.ofPattern("HH:mm dd/MM/yyyy")), reason);
+        
+        // Immediately terminate if running
+        terminateIfRunning(processName);
+        
+        // Voice notification with minutes
+        voiceNotifier.announceBlockMinutes(appName, minutes, reason);
+    }
+    
+    /**
      * Block an application for a specified number of hours
      */
     public void blockApplication(String processName, int hours, String reason) {
