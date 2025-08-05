@@ -33,18 +33,18 @@ public class WindowManager {
     public void createMainWindow(VBox leftSide, VBox rightSide, MenuBarManager menuManager) {
         primaryStage.setTitle("🔒 Enhanced App Time Limiter - Kid-Safe Mode");
         primaryStage.setResizable(true);
-        primaryStage.setMinWidth(1400);
-        primaryStage.setMinHeight(900);
+        primaryStage.setMinWidth(1200);
+        primaryStage.setMinHeight(800);
         
         BorderPane root = new BorderPane();
         
         // Configure left side
-        leftSide.setPadding(new Insets(25));
-        leftSide.setPrefWidth(800);
+        leftSide.setPadding(new Insets(15));
+        leftSide.setPrefWidth(580);
         
         // Configure right side  
-        rightSide.setPadding(new Insets(25));
-        rightSide.setPrefWidth(750);
+        rightSide.setPadding(new Insets(15));
+        rightSide.setPrefWidth(600);
         
         // Add menu bar to left side as first element
         leftSide.getChildren().add(0, menuManager.createMenuBar());
@@ -60,7 +60,7 @@ public class WindowManager {
         root.setLeft(leftScrollPane);
         root.setRight(rightSide);
         
-        Scene scene = new Scene(root, 1400, 900);
+        Scene scene = new Scene(root, 1200, 800);
         primaryStage.setScene(scene);
         
         // Setup window protection

@@ -101,9 +101,9 @@ public class MainWindow {
      * Create left side with all control sections
      */
     private VBox createLeftSide() {
-        VBox leftSide = new VBox(20);
-        leftSide.setPadding(new Insets(25));
-        leftSide.setPrefWidth(800);
+        VBox leftSide = new VBox(10);
+        leftSide.setPadding(new Insets(15));
+        leftSide.setPrefWidth(580);
         
         // Create all sections
         VBox headerSection = UISectionsFactory.createHeaderSection();
@@ -120,17 +120,13 @@ public class MainWindow {
         VBox systemControlsSection = UISectionsFactory.createSystemControlsSection(
             startButton, stopButton);
         
-        VBox statusSection = UISectionsFactory.createStatusSection(
-            minecraftStatusLabel, chromeStatusLabel);
-        
-        // Add all sections to left side
+        // Add all sections to left side (without status section)
         leftSide.getChildren().addAll(
             headerSection,
             timeLimitsSection,
             blockDelaysSection,
             manualBlockingSection,
-            systemControlsSection,
-            statusSection
+            systemControlsSection
         );
         
         return leftSide;
@@ -140,11 +136,14 @@ public class MainWindow {
      * Create right side with log area
      */
     private VBox createRightSide() {
-        VBox rightSide = new VBox(20);
-        rightSide.setPadding(new Insets(25));
+        VBox rightSide = new VBox(10);
+        rightSide.setPadding(new Insets(15));
         
         VBox logSection = UISectionsFactory.createLogSection(logArea);
-        rightSide.getChildren().add(logSection);
+        VBox statusSection = UISectionsFactory.createStatusSection(
+            minecraftStatusLabel, chromeStatusLabel);
+        
+        rightSide.getChildren().addAll(logSection, statusSection);
         
         return rightSide;
     }

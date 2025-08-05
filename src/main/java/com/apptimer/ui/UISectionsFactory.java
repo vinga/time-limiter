@@ -16,19 +16,16 @@ public class UISectionsFactory {
      * Create header section with title and security status
      */
     public static VBox createHeaderSection() {
-        VBox section = new VBox(8);
-        section.setStyle("-fx-border-color: #2196f3; -fx-border-width: 2; -fx-border-radius: 8; -fx-padding: 15; -fx-background-color: #e3f2fd;");
+        VBox section = new VBox(5);
+        section.setStyle("-fx-border-color: #2196f3; -fx-border-width: 1; -fx-border-radius: 5; -fx-padding: 8; -fx-background-color: #e3f2fd; -fx-pref-height: 65;");
         
         Label titleLabel = new Label("🔒 Enhanced App Time Limiter");
-        titleLabel.setStyle("-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #1976d2;");
+        titleLabel.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #1976d2;");
         
-        Label securityLabel = new Label("🛡️ Enhanced Security Mode - Advanced Protection Active");
-        securityLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #d32f2f; -fx-font-weight: bold;");
+        Label statusLabel = new Label("🛡️ Enhanced Security Mode - Auto-monitoring enabled");
+        statusLabel.setStyle("-fx-font-size: 10px; -fx-text-fill: #388e3c;");
         
-        Label statusLabel = new Label("✅ Auto-monitoring enabled | 🔒 Admin protection active");
-        statusLabel.setStyle("-fx-font-size: 11px; -fx-text-fill: #388e3c;");
-        
-        section.getChildren().addAll(titleLabel, securityLabel, statusLabel);
+        section.getChildren().addAll(titleLabel, statusLabel);
         return section;
     }
     
@@ -38,8 +35,8 @@ public class UISectionsFactory {
     public static VBox createTimeLimitsSection(TextField minecraftTimeField, TextField chromeTimeField, 
                                               TextField warningTimeField, Label minecraftStatusLabel, 
                                               Label chromeStatusLabel, Button editButton) {
-        VBox section = new VBox(12);
-        section.setStyle("-fx-border-color: #ff9800; -fx-border-width: 2; -fx-border-radius: 8; -fx-padding: 15; -fx-background-color: #fff3e0;");
+        VBox section = new VBox(8);
+        section.setStyle("-fx-border-color: #ff9800; -fx-border-width: 1; -fx-border-radius: 5; -fx-padding: 10; -fx-background-color: #fff3e0; -fx-pref-height: 110;");
         
         Label sectionTitle = new Label("⏱️ TIME LIMITS CONFIGURATION");
         sectionTitle.setStyle("-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: #f57c00;");
@@ -53,8 +50,8 @@ public class UISectionsFactory {
         warningTimeField.setPrefWidth(80);
         
         GridPane timeLimitsGrid = new GridPane();
-        timeLimitsGrid.setHgap(15);
-        timeLimitsGrid.setVgap(12);
+        timeLimitsGrid.setHgap(10);
+        timeLimitsGrid.setVgap(6);
         
         timeLimitsGrid.add(new Label("Minecraft limit (minutes):"), 0, 0);
         timeLimitsGrid.add(minecraftTimeField, 1, 0);
@@ -77,8 +74,8 @@ public class UISectionsFactory {
      * Create block delays configuration section
      */
     public static VBox createBlockDelaysSection(TextField minecraftDelayField, TextField chromeDelayField) {
-        VBox section = new VBox(12);
-        section.setStyle("-fx-border-color: #9c27b0; -fx-border-width: 2; -fx-border-radius: 8; -fx-padding: 15; -fx-background-color: #f3e5f5;");
+        VBox section = new VBox(6);
+        section.setStyle("-fx-border-color: #9c27b0; -fx-border-width: 1; -fx-border-radius: 5; -fx-padding: 8; -fx-background-color: #f3e5f5; -fx-pref-height: 70;");
         
         Label sectionTitle = new Label("⏳ BLOCK DELAYS CONFIGURATION");
         sectionTitle.setStyle("-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: #7b1fa2;");
@@ -93,8 +90,8 @@ public class UISectionsFactory {
         chromeDelayField.setPrefWidth(80);
         
         GridPane delaysGrid = new GridPane();
-        delaysGrid.setHgap(15);
-        delaysGrid.setVgap(12);
+        delaysGrid.setHgap(10);
+        delaysGrid.setVgap(5);
         
         delaysGrid.add(new Label("Minecraft block delay (min):"), 0, 0);
         delaysGrid.add(minecraftDelayField, 1, 0);
@@ -110,8 +107,8 @@ public class UISectionsFactory {
      * Create manual blocking controls section
      */
     public static VBox createManualBlockingSection() {
-        VBox section = new VBox(12);
-        section.setStyle("-fx-border-color: #f44336; -fx-border-width: 2; -fx-border-radius: 8; -fx-padding: 15; -fx-background-color: #ffebee;");
+        VBox section = new VBox(8);
+        section.setStyle("-fx-border-color: #f44336; -fx-border-width: 1; -fx-border-radius: 5; -fx-padding: 10; -fx-background-color: #ffebee; -fx-pref-height: 85;");
         
         Label sectionTitle = new Label("🚫 MANUAL BLOCKING CONTROLS");
         sectionTitle.setStyle("-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: #d32f2f;");
@@ -120,8 +117,8 @@ public class UISectionsFactory {
         warningLabel.setStyle("-fx-font-size: 10px; -fx-text-fill: #d32f2f;");
         
         GridPane blockingGrid = new GridPane();
-        blockingGrid.setHgap(15);
-        blockingGrid.setVgap(12);
+        blockingGrid.setHgap(10);
+        blockingGrid.setVgap(6);
         
         Button blockMinecraftButton = new Button("🚫 Block Minecraft");
         TextField blockMinecraftMinutesField = new TextField("180");
@@ -154,17 +151,17 @@ public class UISectionsFactory {
      * Create system controls section
      */
     public static VBox createSystemControlsSection(Button startButton, Button stopButton) {
-        VBox section = new VBox(12);
-        section.setStyle("-fx-border-color: #4caf50; -fx-border-width: 2; -fx-border-radius: 8; -fx-padding: 15; -fx-background-color: #e8f5e8;");
+        VBox section = new VBox(8);
+        section.setStyle("-fx-border-color: #4caf50; -fx-border-width: 1; -fx-border-radius: 5; -fx-padding: 10; -fx-background-color: #e8f5e8; -fx-pref-height: 110;");
         
         Label sectionTitle = new Label("⚙️ SYSTEM CONTROLS");
         sectionTitle.setStyle("-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: #388e3c;");
         
         Button exitButton = new Button("🔒 Exit Application (Admin Required)");
         
-        startButton.setStyle("-fx-background-color: #4caf50; -fx-text-fill: white; -fx-font-weight: bold; -fx-pref-width: 220; -fx-padding: 10 16; -fx-font-size: 12px;");
-        stopButton.setStyle("-fx-background-color: #f44336; -fx-text-fill: white; -fx-font-weight: bold; -fx-pref-width: 220; -fx-padding: 10 16; -fx-font-size: 12px;");
-        exitButton.setStyle("-fx-background-color: #d32f2f; -fx-text-fill: white; -fx-font-weight: bold; -fx-pref-width: 220; -fx-padding: 10 16; -fx-font-size: 12px;");
+        startButton.setStyle("-fx-background-color: #4caf50; -fx-text-fill: white; -fx-font-weight: bold; -fx-pref-width: 180; -fx-padding: 8 12; -fx-font-size: 11px;");
+        stopButton.setStyle("-fx-background-color: #f44336; -fx-text-fill: white; -fx-font-weight: bold; -fx-pref-width: 180; -fx-padding: 8 12; -fx-font-size: 11px;");
+        exitButton.setStyle("-fx-background-color: #d32f2f; -fx-text-fill: white; -fx-font-weight: bold; -fx-pref-width: 180; -fx-padding: 8 12; -fx-font-size: 11px;");
         
         // Set initial states
         startButton.setDisable(true); // Already auto-started
@@ -182,8 +179,8 @@ public class UISectionsFactory {
      * Create status monitoring section
      */
     public static VBox createStatusSection(Label minecraftStatusLabel, Label chromeStatusLabel) {
-        VBox section = new VBox(10);
-        section.setStyle("-fx-border-color: #4caf50; -fx-border-width: 2; -fx-border-radius: 8; -fx-padding: 15; -fx-background-color: #e8f5e8;");
+        VBox section = new VBox(6);
+        section.setStyle("-fx-border-color: #4caf50; -fx-border-width: 1; -fx-border-radius: 5; -fx-padding: 10; -fx-background-color: #e8f5e8; -fx-pref-height: 100; -fx-pref-width: 560;");
         
         Label sectionTitle = new Label("📊 CURRENT STATUS");
         sectionTitle.setStyle("-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: #388e3c;");
@@ -199,17 +196,18 @@ public class UISectionsFactory {
      * Create activity log section
      */
     public static VBox createLogSection(TextArea logArea) {
-        VBox section = new VBox(10);
-        section.setStyle("-fx-border-color: #607d8b; -fx-border-width: 2; -fx-border-radius: 8; -fx-padding: 15; -fx-background-color: #eceff1;");
+        VBox section = new VBox(8);
+        section.setStyle("-fx-border-color: #607d8b; -fx-border-width: 1; -fx-border-radius: 5; -fx-padding: 10; -fx-background-color: #eceff1;");
         
         Label sectionTitle = new Label("📝 ACTIVITY LOG");
         sectionTitle.setStyle("-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: #455a64;");
         
         logArea.setEditable(false);
-        logArea.setPrefRowCount(25);
-        logArea.setPrefWidth(700);
+        logArea.setPrefRowCount(18);
+        logArea.setPrefWidth(560);
+        logArea.setPrefHeight(380);
         logArea.setWrapText(true);
-        logArea.setStyle("-fx-font-family: 'Consolas', 'Courier New', monospace; -fx-font-size: 13px; -fx-background-color: #fafafa;");
+        logArea.setStyle("-fx-font-family: 'Consolas', 'Courier New', monospace; -fx-font-size: 11px; -fx-background-color: #fafafa;");
         
         section.getChildren().addAll(sectionTitle, logArea);
         return section;
