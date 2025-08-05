@@ -9,7 +9,7 @@ import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * Provides voice notifications using Windows built-in TTS
+ * Enhanced voice notifications using Windows built-in TTS
  * Falls back to system beep if TTS is not available
  */
 public class VoiceNotifier {
@@ -134,6 +134,91 @@ public class VoiceNotifier {
         });
     }
     
+    /**
+     * Announce when a block has expired
+     */
+    public void announceBlockExpired(String appName) {
+        String message = String.format("%s is now available again.", appName);
+        
+        logger.info("Voice notification: {}", message);
+        
+        CompletableFuture.runAsync(() -> {
+            if (isTtsAvailable) {
+                speakText(message);
+            } else {
+                playUnblockBeep();
+            }
+        });
+    }
+    
+    /**
+     * Announce when an application is manually unblocked by admin
+     */
+    public void announceUnblocked(String appName) {
+        String message = String.format("%s has been unblocked by administrator.", appName);
+        
+        logger.info("Voice notification: {}", message);
+        
+        CompletableFuture.runAsync(() -> {
+            if (isTtsAvailable) {
+                speakText(message);
+            } else {
+                playUnblockBeep();
+            }
+        });
+    }
+    
+    /**
+     * Announce when monitoring starts
+     */
+    public void announceMonitoringStarted() {
+        String message = "Application monitoring has started.";
+        
+        logger.info("Voice notification: {}", message);
+        
+        CompletableFuture.runAsync(() -> {
+            if (isTtsAvailable) {
+                speakText(message);
+            } else {
+                playStartBeep();
+            }
+        });
+    }
+    
+    /**
+     * Announce when monitoring stops
+     */
+    public void announceMonitoringStopped() {
+        String message = "Application monitoring has been stopped.";
+        
+        logger.info("Voice notification: {}", message);
+        
+        CompletableFuture.runAsync(() -> {
+            if (isTtsAvailable) {
+                speakText(message);
+            } else {
+                playStopBeep();
+            }
+        });
+    }
+    
+    /**
+     * Security announcement for unauthorized access attempts
+     */
+    public void announceSecurityViolation(String attemptedAction) {
+        String message = String.format("Security alert: Unauthorized attempt to %s.", attemptedAction);
+        
+        logger.warn("Security voice notification: {}", message);
+        
+        CompletableFuture.runAsync(() -> {
+            if (isTtsAvailable) {
+                speakText(message);
+            } else {
+                playSecurityAlertBeep();
+            }
+        });
+    }
+    
     private void speakText(String text) {
         try {
             ProcessBuilder pb = new ProcessBuilder("powershell", "-Command", 
@@ -185,6 +270,57 @@ public class VoiceNotifier {
             }
         } catch (Exception e) {
             logger.error("Failed to play blocking beep", e);
+        }
+    }
+    
+    private void playUnblockBeep() {
+        try {
+            // Play a positive unblock beep pattern
+            playTone(1200, 200);
+            Thread.sleep(50);
+            playTone(1400, 200);
+            Thread.sleep(50);
+            playTone(1600, 300);
+        } catch (Exception e) {
+            logger.error("Failed to play unblock beep", e);
+        }
+    }
+    
+    private void playStartBeep() {
+        try {
+            // Play an ascending startup beep
+            playTone(400, 150);
+            Thread.sleep(50);
+            playTone(600, 150);
+            Thread.sleep(50);
+            playTone(800, 200);
+        } catch (Exception e) {
+            logger.error("Failed to play start beep", e);
+        }
+    }
+    
+    private void playStopBeep() {
+        try {
+            // Play a descending stop beep
+            playTone(800, 150);
+            Thread.sleep(50);
+            playTone(600, 150);
+            Thread.sleep(50);
+            playTone(400, 200);
+        } catch (Exception e) {
+            logger.error("Failed to play stop beep", e);
+        }
+    }
+    
+    private void playSecurityAlertBeep() {
+        try {
+            // Play an urgent security alert pattern
+            for (int i = 0; i < 6; i++) {
+                playTone(1500, 100); // High frequency, short bursts
+                Thread.sleep(50);
+            }
+        } catch (Exception e) {
+            logger.error("Failed to play security alert beep", e);
         }
     }
     

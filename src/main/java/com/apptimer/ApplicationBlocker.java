@@ -9,18 +9,46 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.Map;
 
 /**
- * Manages application blocking functionality
+ * Enhanced Application Blocker with configurable delays and comprehensive blocking
  */
 public class ApplicationBlocker {
     private static final Logger logger = LoggerFactory.getLogger(ApplicationBlocker.class);
     
     private final Map<String, LocalDateTime> blockedUntil = new ConcurrentHashMap<>();
+    private final Map<String, Integer> defaultBlockDelayMinutes = new ConcurrentHashMap<>();
     private final ProcessMonitor processMonitor;
     private final VoiceNotifier voiceNotifier;
     
     public ApplicationBlocker(ProcessMonitor processMonitor, VoiceNotifier voiceNotifier) {
         this.processMonitor = processMonitor;
         this.voiceNotifier = voiceNotifier;
+        
+        // Initialize default block delays (configurable per app)
+        defaultBlockDelayMinutes.put("minecraft.exe", 60); // 1 hour default
+        defaultBlockDelayMinutes.put("chrome.exe", 60);    // 1 hour default
+    }
+    
+    /**
+     * Set the default block delay for an application when time limit is exceeded
+     */
+    public void setDefaultBlockDelay(String processName, int minutes) {
+        defaultBlockDelayMinutes.put(processName.toLowerCase(), minutes);
+        logger.info("Default block delay for {} set to {} minutes", getAppDisplayName(processName), minutes);
+    }
+    
+    /**
+     * Get the default block delay for an application
+     */
+    public int getDefaultBlockDelay(String processName) {
+        return defaultBlockDelayMinutes.getOrDefault(processName.toLowerCase(), 60);
+    }
+    
+    /**
+     * Block an application using its configured default delay when time limit exceeded
+     */
+    public void blockApplicationWithDefaultDelay(String processName, String reason) {
+        int delayMinutes = getDefaultBlockDelay(processName);
+        blockApplicationMinutes(processName, delayMinutes, reason);
     }
     
     /**
@@ -31,8 +59,8 @@ public class ApplicationBlocker {
         blockedUntil.put(processName.toLowerCase(), blockUntil);
         
         String appName = getAppDisplayName(processName);
-        logger.info("Application {} blocked until {} - Reason: {}", 
-                   appName, blockUntil.format(DateTimeFormatter.ofPattern("HH:mm dd/MM/yyyy")), reason);
+        logger.info("Application {} blocked until {} ({} minutes) - Reason: {}", 
+                   appName, blockUntil.format(DateTimeFormatter.ofPattern("HH:mm dd/MM/yyyy")), minutes, reason);
         
         // Immediately terminate if running
         terminateIfRunning(processName);
@@ -60,10 +88,17 @@ public class ApplicationBlocker {
     }
     
     /**
-     * Block Chrome for 3 hours due to time limit exceeded
+     * Block Chrome using its configured default delay
      */
-    public void blockChromeFor3Hours() {
-        blockApplication("chrome.exe", 3, "Time limit exceeded");
+    public void blockChromeWithConfiguredDelay() {
+        blockApplicationWithDefaultDelay("chrome.exe", "Time limit exceeded");
+    }
+    
+    /**
+     * Block Minecraft using its configured default delay
+     */
+    public void blockMinecraftWithConfiguredDelay() {
+        blockApplicationWithDefaultDelay("minecraft.exe", "Time limit exceeded");
     }
     
     /**
@@ -79,6 +114,7 @@ public class ApplicationBlocker {
         if (LocalDateTime.now().isAfter(blockTime)) {
             blockedUntil.remove(processName.toLowerCase());
             logger.info("Block expired for {}", getAppDisplayName(processName));
+            voiceNotifier.announceBlockExpired(getAppDisplayName(processName));
             return false;
         }
         
@@ -105,20 +141,43 @@ public class ApplicationBlocker {
     }
     
     /**
-     * Handle blocked application detection
+     * Get remaining block time formatted as hours:minutes
+     */
+    public String getRemainingBlockTimeFormatted(String processName) {
+        long totalMinutes = getRemainingBlockTime(processName);
+        if (totalMinutes <= 0) {
+            return "Not blocked";
+        }
+        
+        long hours = totalMinutes / 60;
+        long minutes = totalMinutes % 60;
+        
+        if (hours > 0) {
+            return String.format("%d:%02d", hours, minutes);
+        } else {
+            return String.format("%d min", minutes);
+        }
+    }
+    
+    /**
+     * Handle blocked application detection with enhanced protection
      */
     public void handleBlockedApplication(String processName) {
         String appName = getAppDisplayName(processName);
         long remainingMinutes = getRemainingBlockTime(processName);
         
-        logger.warn("Blocked application {} detected, terminating. {} minutes remaining.", 
+        logger.warn("BLOCKED APPLICATION DETECTED: {} attempting to run. {} minutes remaining in block.", 
                    appName, remainingMinutes);
         
-        // Terminate the process
-        terminateProcess(processName);
+        // Immediate aggressive termination
+        terminateProcessAggressively(processName);
         
-        // Voice warning
+        // Voice warning with remaining time
         voiceNotifier.sayBlockedAttempt(appName, remainingMinutes);
+        
+        // Log security event
+        logger.warn("SECURITY EVENT: Blocked application {} was terminated. Block remaining: {} minutes", 
+                   appName, remainingMinutes);
     }
     
     /**
@@ -128,6 +187,7 @@ public class ApplicationBlocker {
         blockedUntil.remove(processName.toLowerCase());
         String appName = getAppDisplayName(processName);
         logger.info("Application {} unblocked by administrator", appName);
+        voiceNotifier.announceUnblocked(appName);
     }
     
     /**
@@ -137,6 +197,7 @@ public class ApplicationBlocker {
         Map<String, Long> result = new ConcurrentHashMap<>();
         LocalDateTime now = LocalDateTime.now();
         
+        // Clean up expired blocks
         blockedUntil.entrySet().removeIf(entry -> now.isAfter(entry.getValue()));
         
         for (Map.Entry<String, LocalDateTime> entry : blockedUntil.entrySet()) {
@@ -149,6 +210,13 @@ public class ApplicationBlocker {
         return result;
     }
     
+    /**
+     * Check if any applications are currently blocked
+     */
+    public boolean hasBlockedApplications() {
+        return !getBlockedApplications().isEmpty();
+    }
+    
     private void terminateIfRunning(String processName) {
         // Check if process is currently running and terminate it
         try {
@@ -157,16 +225,17 @@ public class ApplicationBlocker {
             int exitCode = process.waitFor();
             
             if (exitCode == 0) {
-                // Process found, terminate it
-                terminateProcess(processName);
+                // Process found, terminate it aggressively
+                terminateProcessAggressively(processName);
             }
         } catch (Exception e) {
             logger.error("Error checking if process {} is running", processName, e);
         }
     }
     
-    private void terminateProcess(String processName) {
+    private void terminateProcessAggressively(String processName) {
         try {
+            // First attempt: Force terminate
             ProcessBuilder pb = new ProcessBuilder("taskkill", "/F", "/IM", processName);
             Process process = pb.start();
             int exitCode = process.waitFor();
@@ -174,7 +243,18 @@ public class ApplicationBlocker {
             if (exitCode == 0) {
                 logger.info("Successfully terminated blocked process {}", processName);
             } else {
-                logger.warn("Failed to terminate blocked process {} (exit code: {})", processName, exitCode);
+                logger.warn("Standard termination failed for {} (exit code: {}), attempting enhanced termination", processName, exitCode);
+                
+                // Second attempt: Kill all instances recursively
+                ProcessBuilder pb2 = new ProcessBuilder("taskkill", "/F", "/T", "/IM", processName);
+                Process process2 = pb2.start();
+                int exitCode2 = process2.waitFor();
+                
+                if (exitCode2 == 0) {
+                    logger.info("Successfully terminated blocked process {} with enhanced method", processName);
+                } else {
+                    logger.error("Failed to terminate blocked process {} with all methods (exit code: {})", processName, exitCode2);
+                }
             }
         } catch (Exception e) {
             logger.error("Error terminating blocked process {}", processName, e);
@@ -217,5 +297,21 @@ public class ApplicationBlocker {
         }
         
         return status.toString();
+    }
+    
+    /**
+     * Get all block delays for configuration persistence
+     */
+    public Map<String, Integer> getAllBlockDelays() {
+        return new ConcurrentHashMap<>(defaultBlockDelayMinutes);
+    }
+    
+    /**
+     * Set all block delays from configuration
+     */
+    public void setAllBlockDelays(Map<String, Integer> delays) {
+        defaultBlockDelayMinutes.clear();
+        defaultBlockDelayMinutes.putAll(delays);
+        logger.info("Block delays loaded from configuration");
     }
 }

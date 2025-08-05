@@ -1,0 +1,10 @@
+{
+  "minecraftLimit" : 75,
+  "chromeLimit" : 1,
+  "warningTime" : 5,
+  "minecraftDelay" : 60,
+  "chromeDelay" : 60,
+  "passwordHash" : "240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9",
+  "timeUsage" : { },
+  "lastSaveDate" : "2025-08-05"
+}

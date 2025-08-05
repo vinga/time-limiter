@@ -14,7 +14,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Monitors running processes on Windows using JNA
+ * Enhanced process monitor with better blocking integration
  */
 public class ProcessMonitor {
     private static final Logger logger = LoggerFactory.getLogger(ProcessMonitor.class);
@@ -53,7 +53,10 @@ public class ProcessMonitor {
             }
         }, 0, 2, TimeUnit.SECONDS);
         
-        logger.info("Process monitoring started");
+        // Announce monitoring started
+        voiceNotifier.announceMonitoringStarted();
+        
+        logger.info("Process monitoring started with enhanced blocking");
     }
     
     public void stopMonitoring() {
@@ -82,12 +85,13 @@ public class ProcessMonitor {
         
         for (String process : targetProcesses) {
             if (runningProcesses.contains(process)) {
-                // Check if application is blocked first
+                // FIRST: Check if application is blocked - this takes priority
                 if (applicationBlocker.isBlocked(process)) {
                     applicationBlocker.handleBlockedApplication(process);
-                    continue; // Skip normal processing for blocked apps
+                    continue; // Skip all other processing for blocked apps
                 }
                 
+                // Record normal activity for non-blocked apps
                 timeTracker.recordActivity(process);
                 
                 // Check if warning should be issued
@@ -98,24 +102,41 @@ public class ProcessMonitor {
                 
                 // Check if time limit exceeded
                 if (timeTracker.isTimeExceeded(process)) {
-                    logger.info("Time limit exceeded for {}, terminating and blocking...", process);
-                    
-                    // Block Chrome for 3 hours FIRST (before terminating)
-                    if (process.equalsIgnoreCase("chrome.exe")) {
-                        applicationBlocker.blockChromeFor3Hours();
-                        logger.info("Chrome has been blocked for 3 hours due to time limit");
-                    }
-                    
-                    // Reset the time tracker for this process to prevent re-triggering
-                    timeTracker.resetTime(process);
-                    
-                    // Then terminate the process
-                    terminateProcess(process);
-                    String appName = getAppDisplayName(process);
-                    voiceNotifier.sayTimeUp(appName);
+                    handleTimeLimitExceeded(process, timeTracker, voiceNotifier);
                 }
             }
         }
+    }
+    
+    /**
+     * Handle when a time limit is exceeded - enhanced with configurable blocking
+     */
+    private void handleTimeLimitExceeded(String process, TimeTracker timeTracker, VoiceNotifier voiceNotifier) {
+        logger.info("Time limit exceeded for {}, implementing enhanced blocking...", process);
+        
+        String appName = getAppDisplayName(process);
+        
+        // STEP 1: Block the application using configured delay
+        if (process.equalsIgnoreCase("chrome.exe")) {
+            applicationBlocker.blockChromeWithConfiguredDelay();
+        } else if (process.equalsIgnoreCase("minecraft.exe")) {
+            applicationBlocker.blockMinecraftWithConfiguredDelay();
+        } else {
+            // For other apps, use default block with configured delay
+            applicationBlocker.blockApplicationWithDefaultDelay(process, "Time limit exceeded");
+        }
+        
+        // STEP 2: Reset the time tracker to prevent re-triggering
+        timeTracker.resetTime(process);
+        
+        // STEP 3: Terminate the currently running process
+        terminateProcess(process);
+        
+        // STEP 4: Voice notification
+        voiceNotifier.sayTimeUp(appName);
+        
+        logger.info("{} blocked for {} minutes due to time limit exceeded", 
+                   appName, applicationBlocker.getDefaultBlockDelay(process));
     }
     
     private Set<String> getRunningProcesses() {
@@ -181,5 +202,28 @@ public class ProcessMonitor {
     
     public ApplicationBlocker getApplicationBlocker() {
         return applicationBlocker;
+    }
+    
+    /**
+     * Add a new process to monitor
+     */
+    public void addTargetProcess(String processName) {
+        targetProcesses.add(processName.toLowerCase());
+        logger.info("Added {} to monitoring targets", processName);
+    }
+    
+    /**
+     * Remove a process from monitoring
+     */
+    public void removeTargetProcess(String processName) {
+        targetProcesses.remove(processName.toLowerCase());
+        logger.info("Removed {} from monitoring targets", processName);
+    }
+    
+    /**
+     * Get all target processes
+     */
+    public Set<String> getTargetProcesses() {
+        return new HashSet<>(targetProcesses);
     }
 }
