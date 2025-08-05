@@ -1,4 +1,4 @@
-# Enhanced App Time Limiter v2.0
+1# Enhanced App Time Limiter v2.0
 
 An advanced Windows application that monitors and limits the usage time of specific applications (Minecraft and Chrome) with enhanced security features, configurable block delays, and professional UI organization.
 
