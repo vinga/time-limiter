@@ -25,7 +25,7 @@ public class SecurityManager {
     private String passwordHash = "240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9";
     private boolean isAuthenticated = false;
     private long authenticationTime = 0;
-    private static final long AUTH_TIMEOUT = 30 * 60 * 1000; // 30 minutes
+    private static final long AUTH_TIMEOUT = 3 * 60 * 1000; // 3 minutes
     private int failedAttempts = 0;
     private long lockoutUntil = 0;
     private static final int MAX_FAILED_ATTEMPTS = 5;

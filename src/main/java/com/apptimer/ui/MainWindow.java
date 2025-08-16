@@ -32,6 +32,7 @@ public class MainWindow {
     private Button startButton;
     private Button stopButton;
     private Button editButton;
+    private VBox manualBlockingSection;
     
     public MainWindow(Stage primaryStage, MainApplicationController controller) {
         this.primaryStage = primaryStage;
@@ -78,9 +79,9 @@ public class MainWindow {
         chromeDelayField = new TextField();
         minecraftStatusLabel = new Label();
         chromeStatusLabel = new Label();
-        startButton = new Button("Start Monitoring");
-        stopButton = new Button("Stop Monitoring");
-        editButton = new Button("🔓 Edit Settings");
+        startButton = new Button("Resume Monitoring");
+        stopButton = new Button("Pause Monitoring");
+        editButton = new Button("💾 Update Settings");
         
         // Load current settings into fields
         var settings = controller.getSettingsManager().getCurrentSettings();
@@ -106,25 +107,19 @@ public class MainWindow {
         leftSide.setPrefWidth(580);
         
         // Create all sections
-        VBox headerSection = UISectionsFactory.createHeaderSection();
-        
         VBox timeLimitsSection = UISectionsFactory.createTimeLimitsSection(
             minecraftTimeField, chromeTimeField, warningTimeField, 
-            minecraftStatusLabel, chromeStatusLabel, editButton);
+            minecraftStatusLabel, chromeStatusLabel, minecraftDelayField,
+            chromeDelayField, editButton);
         
-        VBox blockDelaysSection = UISectionsFactory.createBlockDelaysSection(
-            minecraftDelayField, chromeDelayField);
-        
-        VBox manualBlockingSection = UISectionsFactory.createManualBlockingSection();
+        manualBlockingSection = UISectionsFactory.createManualBlockingSection();
         
         VBox systemControlsSection = UISectionsFactory.createSystemControlsSection(
             startButton, stopButton);
         
-        // Add all sections to left side (without status section)
+        // Add all sections to left side (without block delays section)
         leftSide.getChildren().addAll(
-            headerSection,
             timeLimitsSection,
-            blockDelaysSection,
             manualBlockingSection,
             systemControlsSection
         );
@@ -184,17 +179,17 @@ public class MainWindow {
             stopButton.setDisable(true);
         });
         
-        // Setup manual blocking handlers by creating new controls
-        Button blockMinecraftButton = new Button("🚫 Block Minecraft");
-        TextField blockMinecraftMinutesField = new TextField("180");
-        Button blockChromeButton = new Button("🚫 Block Chrome");
-        TextField blockChromeMinutesField = new TextField("180");
-        
-        blockMinecraftButton.setOnAction(e -> 
-            eventHandlers.handleManualBlock("minecraft.exe", blockMinecraftMinutesField));
-        
-        blockChromeButton.setOnAction(e -> 
-            eventHandlers.handleManualBlock("chrome.exe", blockChromeMinutesField));
+        // Setup manual blocking handlers
+        if (manualBlockingSection.getUserData() instanceof UISectionsFactory.ManualBlockingControls) {
+            UISectionsFactory.ManualBlockingControls controls = 
+                (UISectionsFactory.ManualBlockingControls) manualBlockingSection.getUserData();
+            
+            controls.blockMinecraftButton.setOnAction(e -> 
+                eventHandlers.handleManualBlock("minecraft.exe", controls.blockMinecraftMinutesField));
+            
+            controls.blockChromeButton.setOnAction(e -> 
+                eventHandlers.handleManualBlock("chrome.exe", controls.blockChromeMinutesField));
+        }
         
         // Setup system controls handlers
         Button exitButton = new Button("🔒 Exit Application (Admin Required)");

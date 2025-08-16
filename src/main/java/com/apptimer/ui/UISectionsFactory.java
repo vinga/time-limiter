@@ -34,20 +34,25 @@ public class UISectionsFactory {
      */
     public static VBox createTimeLimitsSection(TextField minecraftTimeField, TextField chromeTimeField, 
                                               TextField warningTimeField, Label minecraftStatusLabel, 
-                                              Label chromeStatusLabel, Button editButton) {
+                                              Label chromeStatusLabel, TextField minecraftDelayField,
+                                              TextField chromeDelayField, Button editButton) {
         VBox section = new VBox(8);
-        section.setStyle("-fx-border-color: #ff9800; -fx-border-width: 1; -fx-border-radius: 5; -fx-padding: 10; -fx-background-color: #fff3e0; -fx-pref-height: 110;");
+        section.setStyle("-fx-border-color: #ff9800; -fx-border-width: 1; -fx-border-radius: 5; -fx-padding: 10; -fx-background-color: #fff3e0; -fx-pref-height: 180;");
         
-        Label sectionTitle = new Label("⏱️ TIME LIMITS CONFIGURATION");
+        Label sectionTitle = new Label("⏱️ TIME LIMITS & BLOCK DELAYS CONFIGURATION");
         sectionTitle.setStyle("-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: #f57c00;");
         
-        // Make fields read-only initially and set preferred width
-        minecraftTimeField.setEditable(false);
+        // Make fields always editable and set preferred width
+        minecraftTimeField.setEditable(true);
         minecraftTimeField.setPrefWidth(80);
-        chromeTimeField.setEditable(false);
+        chromeTimeField.setEditable(true);
         chromeTimeField.setPrefWidth(80);
-        warningTimeField.setEditable(false);
+        warningTimeField.setEditable(true);
         warningTimeField.setPrefWidth(80);
+        minecraftDelayField.setEditable(true);
+        minecraftDelayField.setPrefWidth(80);
+        chromeDelayField.setEditable(true);
+        chromeDelayField.setPrefWidth(80);
         
         GridPane timeLimitsGrid = new GridPane();
         timeLimitsGrid.setHgap(10);
@@ -64,44 +69,18 @@ public class UISectionsFactory {
         timeLimitsGrid.add(new Label("Warning time (minutes):"), 0, 2);
         timeLimitsGrid.add(warningTimeField, 1, 2);
         
+        timeLimitsGrid.add(new Label("Minecraft block delay (minutes):"), 0, 3);
+        timeLimitsGrid.add(minecraftDelayField, 1, 3);
+        
+        timeLimitsGrid.add(new Label("Chrome block delay (minutes):"), 0, 4);
+        timeLimitsGrid.add(chromeDelayField, 1, 4);
+        
         editButton.setStyle("-fx-background-color: #ff9800; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 8 16; -fx-font-size: 12px;");
         
         section.getChildren().addAll(sectionTitle, timeLimitsGrid, editButton);
         return section;
     }
     
-    /**
-     * Create block delays configuration section
-     */
-    public static VBox createBlockDelaysSection(TextField minecraftDelayField, TextField chromeDelayField) {
-        VBox section = new VBox(6);
-        section.setStyle("-fx-border-color: #9c27b0; -fx-border-width: 1; -fx-border-radius: 5; -fx-padding: 8; -fx-background-color: #f3e5f5; -fx-pref-height: 70;");
-        
-        Label sectionTitle = new Label("⏳ BLOCK DELAYS CONFIGURATION");
-        sectionTitle.setStyle("-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: #7b1fa2;");
-        
-        Label descLabel = new Label("Duration apps are blocked after time limit exceeded:");
-        descLabel.setStyle("-fx-font-size: 11px; -fx-text-fill: #7b1fa2;");
-        descLabel.setWrapText(true);
-        
-        minecraftDelayField.setEditable(false);
-        minecraftDelayField.setPrefWidth(80);
-        chromeDelayField.setEditable(false);
-        chromeDelayField.setPrefWidth(80);
-        
-        GridPane delaysGrid = new GridPane();
-        delaysGrid.setHgap(10);
-        delaysGrid.setVgap(5);
-        
-        delaysGrid.add(new Label("Minecraft block delay (min):"), 0, 0);
-        delaysGrid.add(minecraftDelayField, 1, 0);
-        
-        delaysGrid.add(new Label("Chrome block delay (min):"), 0, 1);
-        delaysGrid.add(chromeDelayField, 1, 1);
-        
-        section.getChildren().addAll(sectionTitle, descLabel, delaysGrid);
-        return section;
-    }
     
     /**
      * Create manual blocking controls section

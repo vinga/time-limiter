@@ -23,10 +23,12 @@ public class ProcessMonitor {
     private boolean isMonitoring = false;
     private final Set<String> targetProcesses;
     private ApplicationBlocker applicationBlocker;
+    private Set<String> previouslyRunningProcesses = new HashSet<>();
+    private Runnable statusUpdateCallback;
     
     public ProcessMonitor() {
         targetProcesses = new HashSet<>();
-        targetProcesses.add("Minecraft.exe");
+        targetProcesses.add("minecraft.exe");
         targetProcesses.add("chrome.exe");
     }
     
@@ -82,7 +84,25 @@ public class ProcessMonitor {
     
     private void checkRunningProcesses(TimeTracker timeTracker, VoiceNotifier voiceNotifier) {
         Set<String> runningProcesses = getRunningProcesses();
+        boolean statusChanged = false;
         
+        // Check for processes that stopped running
+        for (String process : targetProcesses) {
+            boolean wasRunning = previouslyRunningProcesses.contains(process);
+            boolean isRunning = runningProcesses.contains(process);
+            
+            if (wasRunning && !isRunning) {
+                // Process stopped running
+                logger.debug("{} stopped running", getAppDisplayName(process));
+                statusChanged = true;
+            } else if (!wasRunning && isRunning) {
+                // Process started running
+                logger.debug("{} started running", getAppDisplayName(process));
+                statusChanged = true;
+            }
+        }
+        
+        // Process currently running apps
         for (String process : targetProcesses) {
             if (runningProcesses.contains(process)) {
                 // FIRST: Check if application is blocked - this takes priority
@@ -105,6 +125,15 @@ public class ProcessMonitor {
                     handleTimeLimitExceeded(process, timeTracker, voiceNotifier);
                 }
             }
+        }
+        
+        // Update previous state
+        previouslyRunningProcesses = new HashSet<>(runningProcesses);
+        previouslyRunningProcesses.retainAll(targetProcesses); // Only keep target processes
+        
+        // Trigger immediate status update if processes changed
+        if (statusChanged && statusUpdateCallback != null) {
+            statusUpdateCallback.run();
         }
     }
     
@@ -160,6 +189,13 @@ public class ProcessMonitor {
                         processName = processName.substring(0, processName.indexOf('\0'));
                     }
                     processes.add(processName.toLowerCase());
+                    
+                    // Special case: Check if javaw.exe is running Minecraft
+                    if (processName.toLowerCase().equals("javaw.exe")) {
+                        if (isMinecraftJavaProcess(processEntry.th32ProcessID.intValue())) {
+                            processes.add("minecraft.exe"); // Treat Minecraft Java process as minecraft.exe
+                        }
+                    }
                 } while (Kernel32.INSTANCE.Process32Next(snapshot, processEntry));
             }
         } finally {
@@ -169,19 +205,103 @@ public class ProcessMonitor {
         return processes;
     }
     
+    /**
+     * Check if a javaw.exe process is running Minecraft by examining its command line
+     */
+    private boolean isMinecraftJavaProcess(int processId) {
+        try {
+            ProcessBuilder pb = new ProcessBuilder("wmic", "process", "where", 
+                "processid=" + processId, "get", "commandline", "/format:list");
+            Process process = pb.start();
+            
+            try (java.io.BufferedReader reader = new java.io.BufferedReader(
+                    new java.io.InputStreamReader(process.getInputStream()))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    if (line.contains("net.minecraft.client.main.Main") || 
+                        line.contains("minecraft") || 
+                        line.contains("Minecraft")) {
+                        return true;
+                    }
+                }
+            }
+            
+            process.waitFor();
+        } catch (Exception e) {
+            logger.debug("Error checking if javaw.exe is Minecraft: {}", e.getMessage());
+        }
+        return false;
+    }
+    
     private void terminateProcess(String processName) {
         try {
-            ProcessBuilder pb = new ProcessBuilder("taskkill", "/F", "/IM", processName);
-            Process process = pb.start();
-            int exitCode = process.waitFor();
-            
-            if (exitCode == 0) {
-                logger.info("Successfully terminated {}", processName);
+            if (processName.equalsIgnoreCase("minecraft.exe")) {
+                // Terminate both minecraft.exe and any Minecraft Java processes
+                terminateMinecraftProcesses();
             } else {
-                logger.warn("Failed to terminate {} (exit code: {})", processName, exitCode);
+                ProcessBuilder pb = new ProcessBuilder("taskkill", "/F", "/IM", processName);
+                Process process = pb.start();
+                int exitCode = process.waitFor();
+                
+                if (exitCode == 0) {
+                    logger.info("Successfully terminated {}", processName);
+                } else {
+                    logger.warn("Failed to terminate {} (exit code: {})", processName, exitCode);
+                }
             }
         } catch (Exception e) {
             logger.error("Error terminating process {}", processName, e);
+        }
+    }
+    
+    /**
+     * Terminate all Minecraft-related processes including javaw.exe running Minecraft
+     */
+    private void terminateMinecraftProcesses() {
+        try {
+            // First, terminate minecraft.exe processes
+            ProcessBuilder pb1 = new ProcessBuilder("taskkill", "/F", "/IM", "minecraft.exe");
+            Process process1 = pb1.start();
+            process1.waitFor();
+            
+            // Then, find and terminate Minecraft Java processes
+            ProcessBuilder pb2 = new ProcessBuilder("wmic", "process", "where", 
+                "name='javaw.exe'", "get", "processid,commandline", "/format:csv");
+            Process process2 = pb2.start();
+            
+            try (java.io.BufferedReader reader = new java.io.BufferedReader(
+                    new java.io.InputStreamReader(process2.getInputStream()))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    if ((line.contains("net.minecraft.client.main.Main") || 
+                         line.contains("minecraft") || 
+                         line.contains("Minecraft")) && line.contains(",")) {
+                        
+                        // CSV format: Node,CommandLine,ProcessId
+                        // Process ID is the last field after the last comma
+                        int lastCommaIndex = line.lastIndexOf(',');
+                        if (lastCommaIndex != -1 && lastCommaIndex < line.length() - 1) {
+                            try {
+                                String processId = line.substring(lastCommaIndex + 1).trim();
+                                if (!processId.isEmpty() && processId.matches("\\d+")) {
+                                    ProcessBuilder pb3 = new ProcessBuilder("taskkill", "/F", "/PID", processId);
+                                    Process process3 = pb3.start();
+                                    process3.waitFor();
+                                    logger.info("Terminated Minecraft Java process with PID: {}", processId);
+                                }
+                            } catch (Exception e) {
+                                logger.debug("Error parsing process ID from line: {}", line);
+                            }
+                        }
+                    }
+                }
+            }
+            
+            process2.waitFor();
+            logger.info("Successfully terminated all Minecraft processes");
+            
+        } catch (Exception e) {
+            logger.error("Error terminating Minecraft processes", e);
         }
     }
     
@@ -205,6 +325,13 @@ public class ProcessMonitor {
     }
     
     /**
+     * Set callback to trigger immediate status updates when process state changes
+     */
+    public void setStatusUpdateCallback(Runnable callback) {
+        this.statusUpdateCallback = callback;
+    }
+    
+    /**
      * Add a new process to monitor
      */
     public void addTargetProcess(String processName) {
@@ -225,5 +352,13 @@ public class ProcessMonitor {
      */
     public Set<String> getTargetProcesses() {
         return new HashSet<>(targetProcesses);
+    }
+    
+    /**
+     * Check if a specific process is currently running
+     */
+    public boolean isProcessRunning(String processName) {
+        Set<String> runningProcesses = getRunningProcesses();
+        return runningProcesses.contains(processName.toLowerCase());
     }
 }

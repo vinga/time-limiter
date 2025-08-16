@@ -52,64 +52,52 @@ public class EventHandlers {
     }
     
     /**
-     * Handle edit button click for settings modification
+     * Handle update button click for settings modification
      */
     public void handleEditButtonClick() {
-        if (securityManager.authenticate(primaryStage, "modify application settings and block delays")) {
-            boolean editing = minecraftTimeField.isEditable();
-            if (editing) {
-                // Save and lock - apply changes immediately
-                try {
-                    int minecraftLimit = Integer.parseInt(minecraftTimeField.getText());
-                    int chromeLimit = Integer.parseInt(chromeTimeField.getText());
-                    int warningTime = Integer.parseInt(warningTimeField.getText());
-                    int minecraftDelay = Integer.parseInt(minecraftDelayField.getText());
-                    int chromeDelay = Integer.parseInt(chromeDelayField.getText());
-                    
-                    // Validate inputs
-                    validateSettings(minecraftLimit, chromeLimit, warningTime, minecraftDelay, chromeDelay);
-                    
-                    // Apply changes to active monitoring immediately
-                    timeTracker.setTimeLimit("minecraft.exe", minecraftLimit * 60);
-                    timeTracker.setTimeLimit("chrome.exe", chromeLimit * 60);
-                    timeTracker.setWarningTime(warningTime * 60);
-                    
-                    // Update block delays
-                    if (processMonitor.getApplicationBlocker() != null) {
-                        processMonitor.getApplicationBlocker().setDefaultBlockDelay("minecraft.exe", minecraftDelay);
-                        processMonitor.getApplicationBlocker().setDefaultBlockDelay("chrome.exe", chromeDelay);
-                    }
-                    
-                    // Update stored settings and save to file
-                    SettingsManager.AppSettings settings = settingsManager.getCurrentSettings();
-                    settings.minecraftLimit = minecraftLimit;
-                    settings.chromeLimit = chromeLimit;
-                    settings.warningTime = warningTime;
-                    settings.minecraftDelay = minecraftDelay;
-                    settings.chromeDelay = chromeDelay;
-                    settings.passwordHash = securityManager.getPasswordHash();
-                    
-                    settingsManager.updateSettings(settings);
-                    settingsManager.saveSettings(settings, timeTracker.getAllTotalTimes());
-                    
-                    // Lock fields
-                    setFieldsEditable(false);
-                    
-                    logArea.appendText("⚙️ Settings updated and applied to active monitoring\n");
-                    logger.info("Settings updated: Minecraft={}min ({}min delay), Chrome={}min ({}min delay), Warning={}min", 
-                              minecraftLimit, minecraftDelay, chromeLimit, chromeDelay, warningTime);
-                    
-                } catch (NumberFormatException ex) {
-                    DialogManager.showErrorDialog("Please enter valid numbers for all settings");
-                    return;
-                } catch (IllegalArgumentException ex) {
-                    DialogManager.showErrorDialog(ex.getMessage());
-                    return;
+        if (securityManager.authenticate(primaryStage, "update application settings and block delays")) {
+            // Apply changes immediately (fields are always editable)
+            try {
+                int minecraftLimit = Integer.parseInt(minecraftTimeField.getText());
+                int chromeLimit = Integer.parseInt(chromeTimeField.getText());
+                int warningTime = Integer.parseInt(warningTimeField.getText());
+                int minecraftDelay = Integer.parseInt(minecraftDelayField.getText());
+                int chromeDelay = Integer.parseInt(chromeDelayField.getText());
+                
+                // Validate inputs
+                validateSettings(minecraftLimit, chromeLimit, warningTime, minecraftDelay, chromeDelay);
+                
+                // Apply changes to active monitoring immediately
+                timeTracker.setTimeLimit("minecraft.exe", minecraftLimit * 60);
+                timeTracker.setTimeLimit("chrome.exe", chromeLimit * 60);
+                timeTracker.setWarningTime(warningTime * 60);
+                
+                // Update block delays
+                if (processMonitor.getApplicationBlocker() != null) {
+                    processMonitor.getApplicationBlocker().setDefaultBlockDelay("minecraft.exe", minecraftDelay);
+                    processMonitor.getApplicationBlocker().setDefaultBlockDelay("chrome.exe", chromeDelay);
                 }
-            } else {
-                // Unlock for editing
-                setFieldsEditable(true);
-                logArea.appendText("✏️ Settings unlocked for editing...\n");
+                
+                // Update stored settings and save to file
+                SettingsManager.AppSettings settings = settingsManager.getCurrentSettings();
+                settings.minecraftLimit = minecraftLimit;
+                settings.chromeLimit = chromeLimit;
+                settings.warningTime = warningTime;
+                settings.minecraftDelay = minecraftDelay;
+                settings.chromeDelay = chromeDelay;
+                settings.passwordHash = securityManager.getPasswordHash();
+                
+                settingsManager.updateSettings(settings);
+                settingsManager.saveSettings(settings, timeTracker.getAllTotalTimes());
+                
+                logArea.appendText("💾 Settings updated and applied to active monitoring\n");
+                logger.info("Settings updated: Minecraft={}min ({}min delay), Chrome={}min ({}min delay), Warning={}min", 
+                          minecraftLimit, minecraftDelay, chromeLimit, chromeDelay, warningTime);
+                
+            } catch (NumberFormatException ex) {
+                DialogManager.showErrorDialog("Please enter valid numbers for all settings");
+            } catch (IllegalArgumentException ex) {
+                DialogManager.showErrorDialog(ex.getMessage());
             }
         }
     }
@@ -131,14 +119,6 @@ public class EventHandlers {
         if (chromeDelay < 5 || chromeDelay > 1440) {
             throw new IllegalArgumentException("Block delays must be between 5 and 1440 minutes (24 hours)");
         }
-    }
-    
-    private void setFieldsEditable(boolean editable) {
-        minecraftTimeField.setEditable(editable);
-        chromeTimeField.setEditable(editable);
-        warningTimeField.setEditable(editable);
-        minecraftDelayField.setEditable(editable);
-        chromeDelayField.setEditable(editable);
     }
     
     /**
@@ -185,7 +165,7 @@ public class EventHandlers {
     }
     
     /**
-     * Handle start monitoring
+     * Handle resume monitoring
      */
     public void handleStartMonitoring() {
         try {
@@ -198,9 +178,14 @@ public class EventHandlers {
             timeTracker.setWarningTime(warningTime * 60);
             
             processMonitor.startMonitoring(timeTracker, voiceNotifier);
+            voiceNotifier.announceMonitoringResumed();
             
-            logArea.appendText("🔄 Monitoring restarted with current settings\n");
-            logger.info("Monitoring restarted - Minecraft: {}min, Chrome: {}min", minecraftLimit, chromeLimit);
+            logArea.appendText("▶️ Monitoring resumed with current settings\n");
+            
+            // Show current status immediately
+            showCurrentStatus();
+            
+            logger.info("Monitoring resumed - Minecraft: {}min, Chrome: {}min", minecraftLimit, chromeLimit);
             
         } catch (NumberFormatException ex) {
             DialogManager.showErrorDialog("Please enter valid numbers for time limits");
@@ -208,15 +193,15 @@ public class EventHandlers {
     }
     
     /**
-     * Handle stop monitoring
+     * Handle pause monitoring
      */
     public void handleStopMonitoring() {
-        if (securityManager.authenticate(primaryStage, "stop application monitoring")) {
+        if (securityManager.authenticate(primaryStage, "pause application monitoring")) {
             processMonitor.stopMonitoring();
             voiceNotifier.announceMonitoringStopped();
             
-            logArea.appendText("🔴 Monitoring stopped by administrator\n");
-            logger.info("Monitoring stopped by admin authentication");
+            logArea.appendText("⏸️ Monitoring paused by administrator\n");
+            logger.info("Monitoring paused by admin authentication");
         }
     }
     
@@ -260,6 +245,34 @@ public class EventHandlers {
     public void handleRefreshStatus() {
         // This would trigger status updates in the main application
         logArea.appendText("🔄 Status refreshed manually\n");
+    }
+    
+    /**
+     * Show current time status in log
+     */
+    private void showCurrentStatus() {
+        try {
+            int minecraftLimit = Integer.parseInt(minecraftTimeField.getText());
+            int chromeLimit = Integer.parseInt(chromeTimeField.getText());
+            
+            logArea.appendText("⏱️ Current time status:\n");
+            
+            // Show Minecraft status
+            long minecraftUsed = timeTracker.getTotalTime("minecraft.exe") / 60;
+            long minecraftRemaining = Math.max(0, minecraftLimit - minecraftUsed);
+            
+            logArea.appendText(String.format("   Minecraft: %d/%d minutes used (%d remaining)\n", 
+                             minecraftUsed, minecraftLimit, minecraftRemaining));
+            
+            // Show Chrome status  
+            long chromeUsed = timeTracker.getTotalTime("chrome.exe") / 60;
+            long chromeRemaining = Math.max(0, chromeLimit - chromeUsed);
+            
+            logArea.appendText(String.format("   Chrome: %d/%d minutes used (%d remaining)\n", 
+                             chromeUsed, chromeLimit, chromeRemaining));
+        } catch (Exception e) {
+            logArea.appendText("   Status: Unable to display current usage\n");
+        }
     }
     
     private String getAppDisplayName(String processName) {

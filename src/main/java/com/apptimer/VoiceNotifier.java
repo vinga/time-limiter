@@ -186,10 +186,10 @@ public class VoiceNotifier {
     }
     
     /**
-     * Announce when monitoring stops
+     * Announce when monitoring is paused
      */
     public void announceMonitoringStopped() {
-        String message = "Application monitoring has been stopped.";
+        String message = "Application monitoring has been paused.";
         
         logger.info("Voice notification: {}", message);
         
@@ -198,6 +198,23 @@ public class VoiceNotifier {
                 speakText(message);
             } else {
                 playStopBeep();
+            }
+        });
+    }
+    
+    /**
+     * Announce when monitoring is resumed
+     */
+    public void announceMonitoringResumed() {
+        String message = "Application monitoring has been resumed.";
+        
+        logger.info("Voice notification: {}", message);
+        
+        CompletableFuture.runAsync(() -> {
+            if (isTtsAvailable) {
+                speakText(message);
+            } else {
+                playStartBeep();
             }
         });
     }

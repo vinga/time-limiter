@@ -28,14 +28,17 @@ public class AppTimeLimiterMain extends Application {
         try {
             logger.info("Initializing Enhanced App Time Limiter...");
             
-            // Create main window first to get log area
+            // Create main window first
             mainWindow = new MainWindow(primaryStage, null);
             
-            // Initialize main application controller
+            // Initialize main application controller with the correct log area
             controller = new MainApplicationController(primaryStage, mainWindow.getLogArea());
             
-            // Update main window with controller reference
+            // Update main window with controller reference - but keep using same logArea
             mainWindow = new MainWindow(primaryStage, controller);
+            
+            // Update controller with the final logArea reference
+            controller.updateLogArea(mainWindow.getLogArea());
             
             // Initialize the application (load settings, start monitoring, etc.)
             controller.initializeApplication();
