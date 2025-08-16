@@ -10,6 +10,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Map;
+import java.util.HashMap;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 /**
  * Manages application settings persistence and loading
@@ -67,6 +70,13 @@ public class SettingsManager {
      * Save settings to file
      */
     public void saveSettings(AppSettings settings, Map<String, Long> timeUsage) {
+        saveSettings(settings, timeUsage, null);
+    }
+    
+    /**
+     * Save settings to file with blocked applications state
+     */
+    public void saveSettings(AppSettings settings, Map<String, Long> timeUsage, Map<String, LocalDateTime> blockedUntil) {
         try {
             ObjectNode settingsNode = objectMapper.createObjectNode();
             settingsNode.put("minecraftLimit", settings.minecraftLimit);
@@ -86,6 +96,17 @@ public class SettingsManager {
                 
                 // Save current date to reset daily
                 settingsNode.put("lastSaveDate", java.time.LocalDate.now().toString());
+            }
+            
+            // Save blocked applications state
+            if (blockedUntil != null && !blockedUntil.isEmpty()) {
+                ObjectNode blockedAppsNode = objectMapper.createObjectNode();
+                DateTimeFormatter formatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
+                for (Map.Entry<String, LocalDateTime> entry : blockedUntil.entrySet()) {
+                    blockedAppsNode.put(entry.getKey(), entry.getValue().format(formatter));
+                }
+                settingsNode.set("blockedApplications", blockedAppsNode);
+                logger.info("Saved blocked applications state: {}", blockedUntil.keySet());
             }
             
             String content = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(settingsNode);
@@ -129,6 +150,47 @@ public class SettingsManager {
         
         logger.info("Starting fresh time tracking (new day or no previous data)");
         return new java.util.HashMap<>();
+    }
+    
+    /**
+     * Load blocked applications state
+     */
+    public Map<String, LocalDateTime> loadBlockedApplications() {
+        Map<String, LocalDateTime> blockedUntil = new HashMap<>();
+        try {
+            Path settingsPath = Paths.get(SETTINGS_FILE);
+            if (Files.exists(settingsPath)) {
+                String content = Files.readString(settingsPath);
+                JsonNode settings = objectMapper.readTree(content);
+                
+                if (settings.has("blockedApplications")) {
+                    JsonNode blockedApps = settings.get("blockedApplications");
+                    DateTimeFormatter formatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
+                    LocalDateTime now = LocalDateTime.now();
+                    
+                    blockedApps.fieldNames().forEachRemaining(appName -> {
+                        try {
+                            String blockTimeStr = blockedApps.get(appName).asText();
+                            LocalDateTime blockUntil = LocalDateTime.parse(blockTimeStr, formatter);
+                            
+                            // Only restore if block hasn't expired
+                            if (now.isBefore(blockUntil)) {
+                                blockedUntil.put(appName, blockUntil);
+                                logger.info("Restored blocked state for {}: blocked until {}", appName, blockUntil);
+                            } else {
+                                logger.info("Block for {} has expired, not restoring", appName);
+                            }
+                        } catch (Exception e) {
+                            logger.warn("Error parsing block time for {}: {}", appName, e.getMessage());
+                        }
+                    });
+                }
+            }
+        } catch (Exception e) {
+            logger.error("Error loading blocked applications state", e);
+        }
+        
+        return blockedUntil;
     }
     
     public AppSettings getCurrentSettings() {

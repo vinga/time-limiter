@@ -82,8 +82,14 @@ public class MainApplicationController {
                 logger.info("Starting fresh time tracking (new day or no previous data)");
             }
             
+            // Restore blocked applications state
+            Map<String, java.time.LocalDateTime> blockedApps = settingsManager.loadBlockedApplications();
+            if (!blockedApps.isEmpty()) {
+                logger.info("Restoring blocked applications state...");
+            }
+            
             // AUTO-START MONITORING with loaded settings
-            startMonitoringWithSettings(settings);
+            startMonitoringWithSettings(settings, blockedApps);
             
             // Start background services
             startProtectionService();
@@ -109,7 +115,7 @@ public class MainApplicationController {
     /**
      * Start monitoring with loaded settings
      */
-    private void startMonitoringWithSettings(SettingsManager.AppSettings settings) {
+    private void startMonitoringWithSettings(SettingsManager.AppSettings settings, Map<String, java.time.LocalDateTime> blockedApps) {
         timeTracker.setTimeLimit("minecraft.exe", settings.minecraftLimit * 60);
         timeTracker.setTimeLimit("chrome.exe", settings.chromeLimit * 60);
         timeTracker.setWarningTime(settings.warningTime * 60);
@@ -120,6 +126,14 @@ public class MainApplicationController {
         if (processMonitor.getApplicationBlocker() != null) {
             processMonitor.getApplicationBlocker().setDefaultBlockDelay("minecraft.exe", settings.minecraftDelay);
             processMonitor.getApplicationBlocker().setDefaultBlockDelay("chrome.exe", settings.chromeDelay);
+            
+            // Set up callback to save state immediately when apps are blocked
+            processMonitor.getApplicationBlocker().setSaveStateCallback(() -> saveCurrentState());
+            
+            // Restore blocked applications state
+            if (blockedApps != null && !blockedApps.isEmpty()) {
+                processMonitor.getApplicationBlocker().restoreBlockedState(blockedApps);
+            }
         }
         
         // Check if any apps should be blocked based on restored time usage
@@ -224,9 +238,16 @@ public class MainApplicationController {
             settings.passwordHash = securityManager.getPasswordHash();
             
             Map<String, Long> timeUsage = timeTracker.getAllTotalTimes();
-            settingsManager.saveSettings(settings, timeUsage);
             
-            logger.debug("Application state saved");
+            // Get blocked applications state
+            Map<String, java.time.LocalDateTime> blockedState = null;
+            if (processMonitor.getApplicationBlocker() != null) {
+                blockedState = processMonitor.getApplicationBlocker().getBlockedUntilState();
+            }
+            
+            settingsManager.saveSettings(settings, timeUsage, blockedState);
+            
+            logger.debug("Application state saved including blocked applications");
         } catch (Exception e) {
             logger.error("Error saving application state", e);
         }

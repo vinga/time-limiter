@@ -18,6 +18,7 @@ public class ApplicationBlocker {
     private final Map<String, Integer> defaultBlockDelayMinutes = new ConcurrentHashMap<>();
     private final ProcessMonitor processMonitor;
     private final VoiceNotifier voiceNotifier;
+    private Runnable saveStateCallback;
     
     public ApplicationBlocker(ProcessMonitor processMonitor, VoiceNotifier voiceNotifier) {
         this.processMonitor = processMonitor;
@@ -67,6 +68,9 @@ public class ApplicationBlocker {
         
         // Voice notification with minutes
         voiceNotifier.announceBlockMinutes(appName, minutes, reason);
+        
+        // Immediately save the blocked state
+        saveBlockedState();
     }
     
     /**
@@ -313,5 +317,40 @@ public class ApplicationBlocker {
         defaultBlockDelayMinutes.clear();
         defaultBlockDelayMinutes.putAll(delays);
         logger.info("Block delays loaded from configuration");
+    }
+    
+    /**
+     * Get blocked applications state for persistence
+     */
+    public Map<String, LocalDateTime> getBlockedUntilState() {
+        return new java.util.concurrent.ConcurrentHashMap<>(blockedUntil);
+    }
+    
+    /**
+     * Restore blocked applications state from persistence
+     */
+    public void restoreBlockedState(Map<String, LocalDateTime> savedBlockedUntil) {
+        if (savedBlockedUntil != null) {
+            blockedUntil.clear();
+            blockedUntil.putAll(savedBlockedUntil);
+            logger.info("Restored blocked applications state: {}", savedBlockedUntil.keySet());
+        }
+    }
+    
+    /**
+     * Set callback to save state when applications are blocked
+     */
+    public void setSaveStateCallback(Runnable callback) {
+        this.saveStateCallback = callback;
+    }
+    
+    /**
+     * Save blocked state immediately
+     */
+    private void saveBlockedState() {
+        if (saveStateCallback != null) {
+            saveStateCallback.run();
+            logger.debug("Blocked state saved immediately");
+        }
     }
 }
