@@ -26,7 +26,7 @@ public class ProcessMonitor {
     
     public ProcessMonitor() {
         targetProcesses = new HashSet<>();
-        targetProcesses.add("minecraft.exe");
+        targetProcesses.add("Minecraft.exe");
         targetProcesses.add("chrome.exe");
     }
     
